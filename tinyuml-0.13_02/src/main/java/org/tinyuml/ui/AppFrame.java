@@ -23,6 +23,9 @@ import java.awt.BorderLayout;
 import java.awt.Component;
 import java.awt.Desktop;
 import java.awt.Dimension;
+import java.util.List;
+import org.tinyuml.draw.Connection;
+import org.tinyuml.draw.LabelSource;
 import java.awt.event.WindowAdapter;
 import java.awt.event.WindowEvent;
 import java.io.File;
@@ -84,6 +87,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   private JTabbedPane tabbedPane;
   private JLabel coordLabel = new JLabel("    ");
   private JLabel countLabel = new JLabel("    ", JLabel.CENTER);
+  private JLabel selectionLabel = new JLabel(" Sin selecci\u00f3n");
   private JLabel memLabel = new JLabel("    ");
   private UmlModel umlModel;
   private DiagramEditor currentEditor;
@@ -250,6 +254,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   statusbar.add(coordLabel, BorderLayout.WEST);
   statusbar.add(countLabel, BorderLayout.CENTER);
   statusbar.add(memLabel, BorderLayout.EAST);
+  statusbar.add(selectionLabel, BorderLayout.SOUTH);
   getContentPane().add(statusbar, BorderLayout.SOUTH);
 }
 
@@ -301,6 +306,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   public void elementRemoved(DiagramEditor editor) {
     updateMenuAndToolbars(editor);
     updateCountLabel(editor);
+    SwingUtilities.invokeLater(() -> updateSelectionLabel());
   }
 
   /**
@@ -346,6 +352,57 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
       }
     }
   }
+
+    /**
+   * Muestra en la barra de estado la categoria y el nombre del elemento
+   * seleccionado.
+   */
+  private void updateSelectionLabel() {
+    List<DiagramElement> selected = getCurrentEditor().getSelectedElements();
+    // al hacer clic en una zona vacia el editor selecciona el propio diagrama
+    if (selected.isEmpty() || selected.get(0) instanceof StructureDiagram) {
+      selectionLabel.setText(" Sin selecci\u00f3n");
+    } else if (selected.size() > 1) {
+      selectionLabel.setText(" Varios elementos seleccionados");
+    } else {
+      DiagramElement element = selected.get(0);
+      selectionLabel.setText(" Category: " + getCategory(element)
+        + " | Name: " + getElementName(element));
+    }
+  }
+
+  /**
+   * Devuelve la categoria del elemento.
+   */
+  private String getCategory(DiagramElement element) {
+    if (element instanceof PackageElement) return "Package";
+    if (element instanceof ClassElement) return "Class";
+    if (element instanceof ComponentElement) return "Component";
+    if (element instanceof NoteElement) return "Note";
+    if (element instanceof Connection) return "Relation";
+    return "Unknown";
+  }
+
+  /**
+   * Devuelve el nombre del elemento, en una sola linea y acortado si es largo.
+   */
+  private String getElementName(DiagramElement element) {
+    if (!(element instanceof LabelSource)) {
+      return "-";
+    }
+    String text = ((LabelSource) element).getLabelText();
+    if (text == null) {
+      return "(sin nombre)";
+    }
+    text = text.replace('\n', ' ').trim();
+    if (text.length() == 0) {
+      return "(sin nombre)";
+    }
+    if (text.length() > 30) {
+      text = text.substring(0, 30) + "...";
+    }
+    return text;
+  }
   // ************************************************************************
   // **** SelectionListener
   // *****************************************
@@ -365,6 +422,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     toolbarmanager.enableButton("COPY", hasSelection);
      
     toolbarmanager.enableButton("DELETE", hasSelection);
+    updateSelectionLabel();
   }
 
   // ************************************************************************
