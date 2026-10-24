@@ -41,6 +41,7 @@ import java.util.List;
 import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
+import javax.swing.JOptionPane;
 import javax.swing.KeyStroke;
 import javax.swing.event.UndoableEditEvent;
 import javax.swing.event.UndoableEditListener;
@@ -251,7 +252,23 @@ DiagramEditorNotification, DiagramOperations, NodeChangeListener {
    */
   public void deleteSelection() {
     Collection<DiagramElement> elements = getSelectedElements();
+    if (elements.size() > 1 && !confirmDeletion(elements.size())) {
+      return;
+    }
     execute(new DeleteElementCommand(this, elements));
+  }
+
+  /**
+   * Pide confirmacion antes de eliminar varios elementos.
+   * @param count la cantidad de elementos que se eliminaran
+   * @return true si el usuario acepta la eliminacion
+   */
+  private boolean confirmDeletion(int count) {
+    int option = JOptionPane.showConfirmDialog(this,
+      "Se eliminar\u00e1n " + count + " elementos. \u00bfDesea continuar?",
+      "Confirmar eliminaci\u00f3n", JOptionPane.YES_NO_OPTION,
+      JOptionPane.WARNING_MESSAGE);
+    return option == JOptionPane.YES_OPTION;
   }
   /**
    * Pastes into this diagram the handed Elements
