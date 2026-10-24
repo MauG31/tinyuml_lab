@@ -52,6 +52,10 @@ import org.tinyuml.draw.LabelChangeListener;
 import org.tinyuml.model.UmlModel;
 import org.tinyuml.util.AppCommandListener;
 import org.tinyuml.umldraw.structure.StructureDiagram;
+import org.tinyuml.umldraw.shared.NoteElement;
+import org.tinyuml.umldraw.structure.ClassElement;
+import org.tinyuml.umldraw.structure.ComponentElement;
+import org.tinyuml.umldraw.structure.PackageElement;
 import org.tinyuml.model.UmlModelImpl;
 import org.tinyuml.ui.commands.ModelReader;
 import org.tinyuml.ui.commands.ModelWriter;
@@ -79,6 +83,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
 
   private JTabbedPane tabbedPane;
   private JLabel coordLabel = new JLabel("    ");
+  private JLabel countLabel = new JLabel("    ", JLabel.CENTER);
   private JLabel memLabel = new JLabel("    ");
   private UmlModel umlModel;
   private DiagramEditor currentEditor;
@@ -213,6 +218,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
                               label.getText());
       }
     });
+     updateCountLabel(currentEditor);
   }
 
   /**
@@ -238,12 +244,14 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   /**
    * Adds a status bar.
    */
+  
   private void installStatusbar() {
-    JPanel statusbar = new JPanel(new BorderLayout());
-    statusbar.add(coordLabel, BorderLayout.WEST);
-    statusbar.add(memLabel, BorderLayout.EAST);
-    getContentPane().add(statusbar, BorderLayout.SOUTH);
-  }
+  JPanel statusbar = new JPanel(new BorderLayout());
+  statusbar.add(coordLabel, BorderLayout.WEST);
+  statusbar.add(countLabel, BorderLayout.CENTER);
+  statusbar.add(memLabel, BorderLayout.EAST);
+  getContentPane().add(statusbar, BorderLayout.SOUTH);
+}
 
   /**
    * Returns the specified resource as a String object.
@@ -284,6 +292,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     // spring loading is implemented here
     staticToolbarManager.doClick("SELECT_MODE");
     updateMenuAndToolbars(editor);
+    updateCountLabel(editor);
   }
 
   /**
@@ -291,6 +300,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
    */
   public void elementRemoved(DiagramEditor editor) {
     updateMenuAndToolbars(editor);
+    updateCountLabel(editor);
   }
 
   /**
@@ -304,7 +314,38 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     toolbarmanager.enableButton("UNDO", editor.canUndo());
     toolbarmanager.enableButton("REDO", editor.canRedo());
   }
+  /**
+   * Cuenta los elementos del diagrama y actualiza la barra de estado.
+   * @param editor el editor cuyo diagrama se cuenta
+   */
+  private void updateCountLabel(DiagramEditor editor) {
+    int[] counts = new int[4]; // 0 Package, 1 Class, 2 Component, 3 Note
+    countElements(editor.getDiagram().getChildren(), counts);
+    int total = counts[0] + counts[1] + counts[2] + counts[3];
+    countLabel.setText(String.format(
+      "Total Items: %02d | Package: %02d | Class: %02d | Component: %02d"
+      + " | Note: %02d", total, counts[0], counts[1], counts[2], counts[3]));
+  }
 
+  /**
+   * Recorre los elementos, incluidos los que estÃ¡n dentro de un paquete.
+   * Las relaciones no se cuentan.
+   */
+  private void countElements(Collection<DiagramElement> elements,
+    int[] counts) {
+    for (DiagramElement element : elements) {
+      if (element instanceof PackageElement) {
+        counts[0]++;
+        countElements(((PackageElement) element).getChildren(), counts);
+      } else if (element instanceof ClassElement) {
+        counts[1]++;
+      } else if (element instanceof ComponentElement) {
+        counts[2]++;
+      } else if (element instanceof NoteElement) {
+        counts[3]++;
+      }
+    }
+  }
   // ************************************************************************
   // **** SelectionListener
   // *****************************************
@@ -629,7 +670,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
 	  if(hasSelection)
 	    lastCopiedElements = getCurrentEditor().getSelectedElements();
 
-	  //adicionalmente, hay que habilitar el botón PASTE!
+	  //adicionalmente, hay que habilitar el botï¿½n PASTE!
 	  menumanager.enableMenuItem("PASTE", hasSelection);
 	  toolbarmanager.enableButton("PASTE", hasSelection);
   }
