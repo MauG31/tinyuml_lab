@@ -88,6 +88,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   private JLabel coordLabel = new JLabel("    ");
   private JLabel countLabel = new JLabel("    ", JLabel.CENTER);
   private JLabel selectionLabel = new JLabel(" Sin selecci\u00f3n");
+  private JLabel selectedCountLabel = new JLabel("Seleccionados: 0 ");
   private JLabel memLabel = new JLabel("    ");
   private UmlModel umlModel;
   private DiagramEditor currentEditor;
@@ -254,7 +255,10 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   statusbar.add(coordLabel, BorderLayout.WEST);
   statusbar.add(countLabel, BorderLayout.CENTER);
   statusbar.add(memLabel, BorderLayout.EAST);
-  statusbar.add(selectionLabel, BorderLayout.SOUTH);
+  JPanel selectionBar = new JPanel(new BorderLayout());
+  selectionBar.add(selectionLabel, BorderLayout.WEST);
+  selectionBar.add(selectedCountLabel, BorderLayout.EAST);
+  statusbar.add(selectionBar, BorderLayout.SOUTH);
   getContentPane().add(statusbar, BorderLayout.SOUTH);
 }
 
@@ -306,7 +310,10 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
   public void elementRemoved(DiagramEditor editor) {
     updateMenuAndToolbars(editor);
     updateCountLabel(editor);
-    SwingUtilities.invokeLater(() -> updateSelectionLabel());
+    SwingUtilities.invokeLater(() -> {
+      updateSelectionLabel();
+      updateSelectedCountLabel();
+    });
   }
 
   /**
@@ -403,6 +410,20 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
     }
     return text;
   }
+
+  /**
+   * Muestra en la barra de estado la cantidad de elementos seleccionados.
+   */
+  private void updateSelectedCountLabel() {
+    int count = 0;
+    for (DiagramElement element : getCurrentEditor().getSelectedElements()) {
+      // al hacer clic en una zona vacia el editor selecciona el propio diagrama
+      if (!(element instanceof StructureDiagram)) {
+        count++;
+      }
+    }
+    selectedCountLabel.setText("Seleccionados: " + count + " ");
+  }
   // ************************************************************************
   // **** SelectionListener
   // *****************************************
@@ -423,6 +444,7 @@ implements EditorStateListener, AppCommandListener, SelectionListener {
      
     toolbarmanager.enableButton("DELETE", hasSelection);
     updateSelectionLabel();
+    updateSelectedCountLabel();
   }
 
   // ************************************************************************
