@@ -23,6 +23,7 @@ import java.awt.Color;
 import java.awt.Dimension;
 import java.awt.Graphics;
 import java.awt.Graphics2D;
+import java.awt.Point;
 import java.awt.Rectangle;
 import java.awt.RenderingHints;
 import java.awt.event.ActionEvent;
@@ -32,6 +33,7 @@ import java.awt.event.MouseListener;
 import java.awt.event.MouseMotionListener;
 import java.awt.geom.Dimension2D;
 import java.awt.geom.Point2D;
+import java.awt.geom.Rectangle2D;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.util.ArrayList;
@@ -42,6 +44,7 @@ import javax.swing.AbstractAction;
 import javax.swing.JComponent;
 import javax.swing.JFrame;
 import javax.swing.JOptionPane;
+import javax.swing.JViewport;
 import javax.swing.KeyStroke;
 import javax.swing.event.UndoableEditEvent;
 import javax.swing.event.UndoableEditListener;
@@ -99,6 +102,10 @@ DiagramEditorNotification, DiagramOperations, NodeChangeListener {
   private static final double MARGIN_LEFT = 25;
   private static final double MARGIN_RIGHT = 30;
   private static final double MARGIN_BOTTOM = 30;
+  // margen, escala minima y maxima para ajustar el diagrama a la ventana
+  private static final double FIT_MARGIN = 20;
+  private static final double MIN_FIT_SCALE = 0.1;
+  private static final double MAX_FIT_SCALE = 1.5;
   private transient DrawingContext drawingContext = new DrawingContextImpl();
   private transient EditorMode editorMode;
   private transient SelectionHandler selectionHandler;
@@ -205,9 +212,12 @@ DiagramEditorNotification, DiagramOperations, NodeChangeListener {
    * This also influences the scroll pane which the component is contained in.
    */
   private void setToDiagramSize() {
+    double scaleFactor = scaling.getScaleFactor();
     setPreferredSize(new Dimension(
-      (int) (diagram.getSize().getWidth() + MARGIN_RIGHT + MARGIN_LEFT),
-      (int) (diagram.getSize().getHeight() + MARGIN_BOTTOM + MARGIN_TOP)));
+      (int) ((diagram.getSize().getWidth() + MARGIN_RIGHT + MARGIN_LEFT)
+        * scaleFactor),
+      (int) ((diagram.getSize().getHeight() + MARGIN_BOTTOM + MARGIN_TOP)
+        * scaleFactor)));
     invalidate();
   }
 
@@ -610,7 +620,59 @@ DiagramEditorNotification, DiagramOperations, NodeChangeListener {
    */
   public void setScaling(Scaling aScaling) {
     scaling = aScaling;
+    setToDiagramSize();
+    revalidate();
     repaint();
+  }
+
+  /**
+   * Ajusta el zoom y la parte visible para que se vean todos los elementos
+   * del diagrama. No cambia la posicion ni el tamano de los elementos.
+   */
+  public void fitToWindow() {
+    if (!(getParent() instanceof JViewport)) {
+      return;
+    }
+    JViewport viewport = (JViewport) getParent();
+    Rectangle2D bounds = getElementsBounds();
+    if (bounds == null) {
+      // diagrama vacio: se vuelve al zoom normal y al inicio del diagrama
+      setScaling(Scaling.SCALING_100);
+      viewport.setViewPosition(new Point(0, 0));
+      return;
+    }
+    double factor = Math.min(
+      viewport.getWidth() / (bounds.getWidth() + 2 * FIT_MARGIN),
+      viewport.getHeight() / (bounds.getHeight() + 2 * FIT_MARGIN));
+    factor = Math.max(MIN_FIT_SCALE, Math.min(MAX_FIT_SCALE, factor));
+    setScaling(Scaling.createScaling(factor));
+    // se aplica el nuevo tamano antes de mover la vista
+    viewport.getParent().validate();
+
+    // se centra la vista en los elementos, sin salir del diagrama
+    Dimension viewSize = getPreferredSize();
+    int x = (int) (bounds.getCenterX() * factor - viewport.getWidth() / 2.0);
+    int y = (int) (bounds.getCenterY() * factor - viewport.getHeight() / 2.0);
+    x = Math.max(0, Math.min(x, viewSize.width - viewport.getWidth()));
+    y = Math.max(0, Math.min(y, viewSize.height - viewport.getHeight()));
+    viewport.setViewPosition(new Point(x, y));
+  }
+
+  /**
+   * Calcula el rectangulo que contiene a todos los elementos del diagrama.
+   * @return el rectangulo, o null si el diagrama no tiene elementos
+   */
+  private Rectangle2D getElementsBounds() {
+    Rectangle2D result = null;
+    for (DiagramElement element : diagram.getChildren()) {
+      if (result == null) {
+        result = new Rectangle2D.Double();
+        result.setRect(element.getAbsoluteBounds());
+      } else {
+        result.add(element.getAbsoluteBounds());
+      }
+    }
+    return result;
   }
 
   /**

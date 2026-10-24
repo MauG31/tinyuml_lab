@@ -43,6 +43,16 @@ public final class Scaling {
   }
 
   /**
+   * Crea un Scaling con un factor arbitrario, por ejemplo para ajustar el
+   * diagrama a la ventana.
+   * @param scaleFactor el factor de escala
+   * @return el nuevo Scaling
+   */
+  public static Scaling createScaling(double scaleFactor) {
+    return new Scaling(scaleFactor);
+  }
+
+  /**
    * Returns the scaling factor.
    * @return the scaling factor
    */

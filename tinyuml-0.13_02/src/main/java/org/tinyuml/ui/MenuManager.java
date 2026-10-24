@@ -48,6 +48,7 @@ public class MenuManager implements ActionListener {
   private List<AppCommandListener> listeners =
     new ArrayList<AppCommandListener>();
   private Map<String, JMenuItem> itemMap = new HashMap<String, JMenuItem>();
+  private ButtonGroup zoomGroup;
 
   /**
    * Creates a new instance of MenuManager.
@@ -120,6 +121,8 @@ public class MenuManager implements ActionListener {
     group.add(zoom100);
     group.add(zoom150);
     zoom100.setSelected(true);
+    zoomGroup = group;
+    createMenuItem(viewMenu, "fit_to_window");
     viewMenu.addSeparator();
     JMenuItem showGrid = createCheckBoxMenuItem(viewMenu, "showgrid");
     showGrid.setSelected(true);
@@ -235,6 +238,10 @@ public class MenuManager implements ActionListener {
    * {@inheritDoc}
    */
   public void actionPerformed(ActionEvent e) {
+    // el zoom ajustado no es ninguno de los porcentajes fijos del menu
+    if ("FIT_TO_WINDOW".equals(e.getActionCommand())) {
+      zoomGroup.clearSelection();
+    }
     for (AppCommandListener l : listeners) {
       l.handleCommand(e.getActionCommand());
     }
